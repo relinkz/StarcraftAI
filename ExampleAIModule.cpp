@@ -10,7 +10,12 @@ BWTA::Region* enemy_base;
 //when a new game has been started with the bot.
 void ExampleAIModule::onStart()
 {
+	//Goal test;
+	//test.addObjective(Terran_Command_Center,1);
+
 	Broodwar->sendText("Hello world!");
+
+	//BroodWar->sendText("I want to build a");
 	//Enable flags
 	Broodwar->enableFlag(Flag::UserInput);
 	//Uncomment to enable complete map information
@@ -352,4 +357,69 @@ void ExampleAIModule::showForces()
 void ExampleAIModule::onUnitComplete(BWAPI::Unit *unit)
 {
 	//Broodwar->sendText("A %s [%x] has been completed at (%d,%d)",unit->getType().getName().c_str(),unit,unit->getPosition().x(),unit->getPosition().y());
+}
+
+
+/*
+Axel unt Sweppes klasser
+
+*/
+
+ToBuild::ToBuild()
+{
+	this->quantity = 0;
+	this->unitType = NULL;
+}
+
+ToBuild::ToBuild(UnitType *type, int quantity)
+{
+	this->unitType = type;
+	this->quantity = quantity;
+}
+
+int ToBuild::getQuantity() const
+{
+	return this->quantity;
+}
+
+UnitType* ToBuild::getUnitType() const
+{
+	return this->unitType;
+}
+
+void ToBuild::setQuantity(const int &newQuantity)
+{
+	this->quantity = newQuantity;
+}
+
+void ToBuild::setUnitType(UnitType *unitType)
+{
+	if(this->unitType != NULL)
+		delete this->unitType;
+
+	this->unitType = unitType;
+}
+
+Goal::Goal()
+{
+	for(int i = 0; i < 5; i++)
+	{
+		this->toDo[i] = NULL;
+	}
+}
+
+void Goal::addObjective(BWAPI::UnitType *unit, int nrOfTypes)
+{
+	ToBuild test = ToBuild(unit,nrOfTypes);
+	this->toDo[test];
+}
+
+string Goal::nextUnitName() const
+{
+	string test2;
+	UnitType test;
+	test = this->toDo[0].getType();
+	test2 = test.c_str();
+
+	return test2;
 }

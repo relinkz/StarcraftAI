@@ -3,6 +3,7 @@
 
 #include <BWTA.h>
 #include <windows.h>
+#include <List>
 
 extern bool analyzed;
 extern bool analysis_just_finished;
@@ -42,3 +43,46 @@ public:
 	void showForces();
 	Position findGuardPoint();
 };
+//
+//class General
+//{
+//};
+//
+//class Agent
+//{
+//};
+//
+//class ConstructAgent : public Agent
+//{
+//};
+//
+//class UnitAgent : public Agent
+//{
+//};
+
+class ToBuild
+{
+private:
+	UnitType* unitType;
+	int quantity;
+public:
+	ToBuild(UnitType *type,int quantity);
+	ToBuild();
+	int getQuantity() const;
+	UnitType* getUnitType() const;
+	
+	void setQuantity(const int &newQuantity);
+	void setUnitType(UnitType *unitType);
+};
+
+class Goal
+{
+//array av det som finns
+private:
+	ToBuild[5] toDo;
+public:
+	Goal();
+	void addObjective(UnitType *unit, int nrOfTypes);
+	string nextUnitName() const;
+};
+
