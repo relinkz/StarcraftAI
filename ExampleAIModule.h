@@ -66,16 +66,16 @@ class UnitAgent : public Agent
 class ToBuild
 {
 private:
-	UnitType* wantedUnits;
+	UnitType wantedUnits;
 	int quantity;
 public:
-	ToBuild(BWAPI::UnitType* unit,int quantity);
+	ToBuild(BWAPI::UnitType unit,int quantity);
 	ToBuild();
 	int getQuantity() const;
-	UnitType* getUnitType() const;
+	UnitType getUnitType() const;
 	
 	void setQuantity(const int &newQuantity);
-	void setUnitType(UnitType* unit);
+	void setUnitType(UnitType unit);
 
 
 	void decreaseQuant();
@@ -85,10 +85,13 @@ class Goal
 {
 //array av det som finns
 public:
-	std::vector<ToBuild> toDo;
+	std::vector<ToBuild*> toDo;
 	Goal();
-	void addObjective(UnitType *unit,int nrOfTypes);
+	void addObjective(UnitType unit,int nrOfTypes);
 	string nextUnitName() const;
 
-	vector<ToBuild> getToDo() const; 
+	ToBuild* getGoal();
+	void objectiveComplete();
+
+	vector<ToBuild*> getToDo() const; 
 };
