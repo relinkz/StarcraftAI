@@ -19,6 +19,7 @@ using namespace std;
 class ExampleAIModule : public BWAPI::AIModule
 {
 public:
+	bool startUp;
 	//Methods inherited from BWAPI:AIModule
 	virtual void onStart();
 	virtual void onEnd(bool isWinner);
@@ -46,29 +47,12 @@ public:
 	Position findGuardPoint();
 };
 
-
-class General
-{
-};
-
-class Agent
-{
-};
-
-class ConstructAgent : public Agent
-{
-};
-
-class UnitAgent : public Agent
-{
-};
-
 class ToBuild
 {
 private:
+public:
 	UnitType wantedUnits;
 	int quantity;
-public:
 	ToBuild(BWAPI::UnitType unit,int quantity);
 	ToBuild();
 	int getQuantity() const;
@@ -85,13 +69,19 @@ class Goal
 {
 //array av det som finns
 public:
-	std::vector<ToBuild*> toDo;
+	std::vector<ToBuild*> buildingsToBuild;
+	std::vector<ToBuild*> unitsToBuild;
+	std::vector<BWAPI::Position> attackPosition;
 	Goal();
 	void addObjective(UnitType unit,int nrOfTypes);
+	void addAttackObjective(BWAPI::Position);
+	void addScoutObj();
 	string nextUnitName() const;
 
-	ToBuild* getGoal();
+	ToBuild* getBuildingGoal();
+	ToBuild* getUnitBuildGoal();
 	void objectiveComplete();
+	void pop();
 
 	vector<ToBuild*> getToDo() const; 
 };

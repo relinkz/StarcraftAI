@@ -14,18 +14,26 @@ using namespace BWTA;
 class ConstructionAgent
 {
 private:
-	int nrOfWorkers;
+	int nrOfCollectors;
 	bool isBuilderSet;
+	bool recources;
+	bool barracksBuilt;
 	std::vector<TilePosition> buildPos;
 	Unit* bulider;
-	ToBuild* currentObj;
+	Unit* startLocation;
+	Unit* vespinGas;
+	ToBuild* currentBuildingObj;
+	ToBuild* currentUnitBuildObj;
 	std::vector<Unit*> workers;
 public:
 	ConstructionAgent();
 	ConstructionAgent(TilePosition start);
-	void onFrame(ToBuild* toBuild);
+	void onFrame(ToBuild* buildingsToBuild,ToBuild* unitsToBuild,Goal AI_Goal);
 	TilePosition findBuildSpot(UnitType toBuild);
-	void isUnitWorker(BWAPI::Unit* unit);
+	void onUnitComplete(BWAPI::Unit* unit);
+	void onUnitCreated(BWAPI::Unit* unit,Goal AI_Goal);
+	void produceExtraUnit(Goal AI_Goal);
+	UnitType whatBuilds(UnitType unit);
 
 };
 

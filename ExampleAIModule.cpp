@@ -1,5 +1,6 @@
 #include "ExampleAIModule.h" 
 #include "ConstructionAgent.h"
+#include "UnitAgent.h"
 #include <cstdlib>
 #include <ctime>
 using namespace BWAPI;
@@ -11,22 +12,48 @@ bool analysis_just_finished;
 BWTA::Region* home;
 BWTA::Region* enemy_base;
 
-BWAPI::UnitType test = BWAPI::UnitTypes::Terran_SCV;
-BWAPI::UnitType test2 = BWAPI::UnitTypes::Terran_Supply_Depot;
-BWAPI::UnitType test3 = BWAPI::UnitTypes::Terran_Barracks;
+BWAPI::UnitType scv = BWAPI::UnitTypes::Terran_SCV;
+BWAPI::UnitType supplies = BWAPI::UnitTypes::Terran_Supply_Depot;
+BWAPI::UnitType barracks = BWAPI::UnitTypes::Terran_Barracks;
+BWAPI::UnitType marine = BWAPI::UnitTypes::Terran_Marine;
 
+BWAPI::UnitType academy = BWAPI::UnitTypes::Terran_Academy;
+BWAPI::UnitType refinery = BWAPI::UnitTypes::Terran_Refinery;
+BWAPI::UnitType medic = BWAPI::UnitTypes::Terran_Medic;
+
+BWAPI::UnitType factory = BWAPI::UnitTypes::Terran_Factory;
+BWAPI::UnitType mShop = BWAPI::UnitTypes::Terran_Machine_Shop;
+BWAPI::UnitType siegeTank = BWAPI::UnitTypes::Terran_Siege_Tank_Tank_Mode;
 
 //UnitTypes test = BWAPI::UnitTypes::Terran_SCV;
 Goal AI_Goal = Goal();
 ConstructionAgent CAgent = ConstructionAgent();
+UnitAgent UAgent = UnitAgent();
 
+ToBuild *defaultGoal = new ToBuild();
 
 //This is the startup method. It is called once
 //when a new game has been started with the bot.
 void ExampleAIModule::onStart()
 {
-	AI_Goal.addObjective(test2, 2);
-	AI_Goal.addObjective(test3, 1);
+	this->startUp = true;
+	//step 1
+	AI_Goal.addObjective(scv, 2); //gather resourses faster
+	AI_Goal.addObjective(supplies, 3); 
+	AI_Goal.addObjective(barracks, 1);
+	AI_Goal.addObjective(marine, 10);
+	//step 2
+	AI_Goal.addObjective(academy, 1);
+	AI_Goal.addObjective(refinery, 1);
+	AI_Goal.addObjective(medic, 3);
+	AI_Goal.addObjective(scv, 5); //moooore resourses!
+	//step3
+	AI_Goal.addObjective(factory, 1);
+	AI_Goal.addObjective(mShop, 1);
+	AI_Goal.addObjective(siegeTank, 3);
+	//step5
+	//implemented in UnitAgent
+
 	Broodwar->sendText("Hello world!");
 	CAgent = ConstructionAgent(Broodwar->self()->getStartLocation());
 	
@@ -34,7 +61,8 @@ void ExampleAIModule::onStart()
 	Broodwar->enableFlag(Flag::UserInput);
 	//Uncomment to enable complete map information
 	Broodwar->enableFlag(Flag::CompleteMapInformation);
-	Broodwar->enableFlag(0);
+	Broodwar->enableFlag(1);
+	
 	//Start analyzing map data
 	BWTA::readMap();
 	analyzed=false;
@@ -42,28 +70,19 @@ void ExampleAIModule::onStart()
 	//CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)AnalyzeThread, NULL, 0, NULL); //Threaded version
 	AnalyzeThread();
 
-	//AI_Goal.addObjective(UnitTypes::Terran_SCV,2);
+	for (int i = 0; i < Flag::Max; ++i)
+	{
+		Broodwar->enableFlag(i);
+	}
+	
+	Broodwar->sendText("power overwhelming");
+	//Broodwar->sendText("show me the money");
+	//Broodwar->sendText("operation cwal"); //fusk som instant bygger grejjer
+	Broodwar->sendText("/show visibility");
 
-    //Send each worker to the mineral field that is closest to it
-    /*for(std::set<Unit*>::const_iterator i=Broodwar->self()->getUnits().begin();i!=Broodwar->self()->getUnits().end();i++)
-    {
-		if ((*i)->getType().isWorker())
-		{
-			Unit* closestMineral=NULL;
-			for(std::set<Unit*>::iterator m=Broodwar->getMinerals().begin();m!=Broodwar->getMinerals().end();m++)
-			{
-				if (closestMineral==NULL || (*i)->getDistance(*m)<(*i)->getDistance(closestMineral))
-				{	
-					closestMineral=*m;
-				}
-			}
-			if (closestMineral!=NULL)
-			{
-				(*i)->rightClick(closestMineral);
-				Broodwar->printf("Send worker %d to mineral %d", (*i)->getID(), closestMineral->getID());
-			}
-		}
-	}*/
+	Broodwar->printf("/cheats");
+	
+	UAgent.setNewChokePoint(this->findGuardPoint());
 }
 
 //Called when a game is ended.
@@ -96,7 +115,6 @@ Position ExampleAIModule::findGuardPoint()
 			choke = *c;
 		}
 	}
-
 	return choke->getCenter();
 }
 
@@ -104,57 +122,19 @@ Position ExampleAIModule::findGuardPoint()
 //shall be called.
 void ExampleAIModule::onFrame()
 {
-	CAgent.onFrame(AI_Goal.getGoal());
+	if (Broodwar->getFrameCount() > 100)
+	{
+		CAgent.onFrame(AI_Goal.getBuildingGoal(),AI_Goal.getUnitBuildGoal(),AI_Goal);
+		AI_Goal.pop();
+		this->startUp = false;
+	}
 	//Call every 100:th frame
 	if (Broodwar->getFrameCount() % 100 == 0)
 	{
-		//getBuildLocation(Broodwar->self()->getStartLocation(),AI_Goal.getGoal().getUnitType());
-		//Order one of our workers to guard our chokepoint.
+		UAgent.onFrame();
+
+
 		//Iterate through the list of units.
-		for(std::set<Unit*>::const_iterator i=Broodwar->self()->getUnits().begin();i!=Broodwar->self()->getUnits().end();i++)
-		{
-			bool commandedFlag = false;
-			//Check if unit is a worker.
-			/*if ((*i)->getType().isWorker())
-			{
-
-				Unit* closestMineral=NULL;
-				for(std::set<Unit*>::iterator m=Broodwar->getMinerals().begin();m!=Broodwar->getMinerals().end();m++)
-				{
-					if (closestMineral==NULL || (*i)->getDistance(*m)<(*i)->getDistance(closestMineral))
-					{	
-						closestMineral=*m;
-					}
-				}
-				if(AI_Goal.getGoal().getUnitType().isBuilding() && Broodwar->self()->minerals() >= 150 && commandedFlag == false)
-				{
-
-					TilePosition test = TilePosition(0, -5);
-					Broodwar->printf("cannot build, something in the way");
-					(*i)->build(Broodwar->self()->getStartLocation()- test,AI_Goal.getGoal().getUnitType());
-					commandedFlag = true;
-				}
-				else if (closestMineral!=NULL)
-				{
-					(*i)->rightClick(closestMineral);
-					Broodwar->printf("Send worker %d to mineral %d", (*i)->getID(), closestMineral->getID());
-				}
-			}
-
-			else if((*i)->getType().isResourceDepot() && AI_Goal.getGoal().getUnitType() != UnitTypes::Buildings)
-			{
-				if((*i)->isIdle())
-				{
-					if(AI_Goal.getGoal().getQuantity() > 0 && Broodwar->self()->minerals() >= 50)
-					{
-						//((*i)->train(AI_Goal.getGoal().getUnitType()));
-						//AI_Goal.getGoal().decreaseQuant();		
-					}
-					
-					
-				}
-			}*/
-		}
 	}
   
 	//Draw lines around regions, chokepoints etc.
@@ -243,6 +223,11 @@ void ExampleAIModule::onUnitCreate(BWAPI::Unit* unit)
 	if (unit->getPlayer() == Broodwar->self())
 	{
 		Broodwar->sendText("A %s [%x] has been created at (%d,%d)",unit->getType().getName().c_str(),unit,unit->getPosition().x(),unit->getPosition().y());
+	}
+	if(this->startUp == false)
+	{
+		//Broodwar->sendText("A %s [%x] has been completed at (%d,%d)",unit->getType().getName().c_str(),unit,unit->getPosition().x(),unit->getPosition().y());
+		CAgent.onUnitCreated(unit,AI_Goal);
 	}
 }
 
@@ -404,44 +389,18 @@ void ExampleAIModule::showForces()
 //Called when a unit has been completed, i.e. finished built.
 void ExampleAIModule::onUnitComplete(BWAPI::Unit *unit)
 {
-	//Broodwar->sendText("A %s [%x] has been completed at (%d,%d)",unit->getType().getName().c_str(),unit,unit->getPosition().x(),unit->getPosition().y());
-	CAgent.isUnitWorker(unit);
+
+	if(this->startUp == false)
+	{
+		//Broodwar->sendText("A %s [%x] has been completed at (%d,%d)",unit->getType().getName().c_str(),unit,unit->getPosition().x(),unit->getPosition().y());
+		CAgent.onUnitComplete(unit);
+		UAgent.onUnitComplete(unit);
+	}
 }
+
 TilePosition getBuildLocation(TilePosition startLocation, UnitType building)
 {
-	/*
-	Super advänced building location finder. copyright axel and sweppzi software.
-	*/
-	/*std::srand((unsigned) time(NULL));
-	int randomX = std::rand();
-	int randomY = std::rand() * randomX;
-	randomY %= 10;
-	randomX %=10;
-
-	char tesar[10];
-	char tesar1[10];
-
-	_itoa(randomY,tesar,10);
-	_itoa(randomX,tesar1,10);
-
-	Broodwar->printf(tesar);
-	Broodwar->printf(tesar1);
-
-	
-
-	for(int i = 0; i < 4; i++)
-	{
-		if(test1.isValid())
-		{
-			if(test1.x - 1)
-			{
-			}
-		}
-	
-	}*/
 	TilePosition test1(-1,-1);
-
-	
 	
 	return test1;
 }
@@ -451,7 +410,8 @@ Axel unt Sweppes klasser
 
 ToBuild::ToBuild()
 {
-	this->quantity = 0;
+	this->wantedUnits = BWAPI::UnitTypes::None;
+	this->quantity = 2;
 }
 
 ToBuild::ToBuild(UnitType unit, int quantity)
@@ -477,8 +437,6 @@ void ToBuild::setQuantity(const int &newQuantity)
 
 void ToBuild::setUnitType(UnitType unit)
 {
-	if(this->wantedUnits != NULL)
-		//delete this->unit;
 
 	this->wantedUnits = unit;
 }
@@ -486,22 +444,31 @@ void ToBuild::setUnitType(UnitType unit)
 void ToBuild::decreaseQuant()
 {
 	this->quantity--;
-	char tesar[10];
-	_itoa(this->quantity,tesar,10);
-	BWAPI::Broodwar->printf(tesar);
 }
 
 Goal::Goal()
 {
-	this->toDo.empty();
+	this->buildingsToBuild.empty();
+	this->unitsToBuild.empty();
 }
 
 void Goal::addObjective(UnitType unit, int nrOfTypes)
 {
-	ToBuild* toAdd = new ToBuild(unit, nrOfTypes);
+	
+	if(unit.isBuilding() || unit.isRefinery())
+	{
+		ToBuild* toAdd = new ToBuild(unit, nrOfTypes);
 
-	this->toDo.push_back(toAdd);
+		this->buildingsToBuild.push_back(toAdd);
+	}
+	else
+	{
+		ToBuild* toAdd = new ToBuild(unit, nrOfTypes);
+
+		this->unitsToBuild.push_back(toAdd);
+	}
 }
+
 
 string Goal::nextUnitName() const
 {
@@ -509,20 +476,41 @@ string Goal::nextUnitName() const
 	return test2;
 }
 
-ToBuild* Goal::getGoal()
+ToBuild* Goal::getBuildingGoal()
 {
-	ToBuild* temp = new ToBuild();
-	if(this->toDo.front()->getQuantity() == 0)
-	{
-		this->toDo.erase(toDo.begin());
-		BWAPI::Broodwar->printf("Goal finnished");
-	}
+	ToBuild* temp = defaultGoal;
 
-
-	if(this->toDo.size() != 0)
+	if(this->buildingsToBuild.size() != 0)
 	{
-		temp = this->toDo.front();
+		temp = this->buildingsToBuild.front();
 	}
 
 	return temp;
+}
+ToBuild* Goal::getUnitBuildGoal()
+{
+	ToBuild* temp = defaultGoal;
+
+	if(this->unitsToBuild.size() != 0)
+	{
+		temp = this->unitsToBuild.front();
+	}
+
+	return temp;
+}
+void Goal::pop()
+{
+	if(this->buildingsToBuild.size() != 0 && this->buildingsToBuild.front()->getQuantity() == 0)
+	{
+		this->buildingsToBuild.erase(buildingsToBuild.begin());
+		BWAPI::Broodwar->printf("Goal finnished");
+	}
+	for(int i = 0; i < this->unitsToBuild.size();i++)
+	{
+		if(this->unitsToBuild.size() != 0 && this->unitsToBuild.at(i)->getQuantity() == 0)
+		{
+		this->unitsToBuild.erase(unitsToBuild.begin() + i);
+		BWAPI::Broodwar->printf("Goal finnished");
+		}
+	}
 }
